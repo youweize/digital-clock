@@ -1,0 +1,413 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include<reg51.h>
+   2          #include<intrins.h>
+   3          #define uint unsigned int 
+   4          #define uchar unsigned char
+   5          //time and alock setting, global
+   6          uchar hours;
+   7          uchar mins;
+   8          uchar seconds;
+   9          
+  10          uchar alock_hours;
+  11          uchar alock_mins;
+  12          uchar alock_seconds;
+  13          
+  14          sbit button1 = P1^0;
+  15          sbit button2 = P1^1;
+  16          sbit button3 = P1^2;
+  17          sbit led = P1^7;
+  18          uchar num = 0;
+  19          uchar code table1[] =
+  20          {0xc0,0xf9,0xa4,0xb0,
+  21          
+  22          0x99,0x92,0x82,0xf8,
+  23          0x80,0x90,0x88,0x83,
+  24          0xc6,0xa1,0x86,0x8e};
+  25          void display_time();
+  26          void init_time(){
+  27   1        hours = mins = seconds = alock_hours = alock_mins = alock_seconds =  0;
+  28   1        hours = 12;
+  29   1        mins = 34;
+  30   1        seconds = 50;
+  31   1        alock_hours = 12;
+  32   1        alock_mins = 35;
+  33   1        alock_seconds  = 11;
+  34   1      }
+  35          void delay(uint xms)
+  36          {
+  37   1        uint i,j;
+  38   1        for(i = 0; i<xms; ++i)
+  39   1          for(j = 0; j<110; ++j);
+  40   1      }
+  41          void initT0()
+  42          {
+  43   1        TMOD = 0x01;
+  44   1        TH0 = 0xD8;
+  45   1        TL0 = 0xF0;
+  46   1        EA = 1;
+  47   1        ET0 = 1;
+  48   1        TR0 = 1;
+  49   1      }
+  50          void initEx0() {
+  51   1        EA = 1;  
+  52   1        EX0 = 1;   
+  53   1        IT0 = 1;  
+  54   1        EX1 = 1;  
+  55   1        IT1 = 1;  
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 2   
+
+  56   1        PT0 = 1;
+  57   1        PX0 = 1;
+  58   1      }
+  59          void t0Intr() interrupt 1//change time
+  60          {
+  61   1        TH0 = 0xD8;
+  62   1        TL0 = 0xF0;
+  63   1        
+  64   1        num++;
+  65   1        if(num == 100)
+  66   1        {
+  67   2          num = 0;
+  68   2          seconds = seconds + 1;
+  69   2          if(seconds == 60){
+  70   3            seconds = 0;
+  71   3            mins = mins + 1;
+  72   3            if(mins == 60){
+  73   4              mins = 0;
+  74   4              hours = hours + 1;
+  75   4              if(hours == 24){
+  76   5                hours = 0;
+  77   5              }
+  78   4            }
+  79   3          }
+  80   2        }
+  81   1      }
+  82          void ex0_intr() interrupt 0 { //int0 ,set time
+  83   1        uchar i,wei=0x20;
+  84   1        uchar n = 0x00;
+  85   1        uchar dp = 0;
+  86   1        uchar flash = 0;
+  87   1        uchar cnt = 0;
+  88   1        uchar res;
+  89   1        while(1)
+  90   1        {
+  91   2          wei=0x20;
+  92   2          for(i=0;i<6;i++)
+  93   2          {   
+  94   3          //P0=table1[i];
+  95   3          dp = 0;
+  96   3          if(i == 0){
+  97   4            n = seconds%10;
+  98   4            dp = 1;
+  99   4          }else if(i == 1){
+ 100   4            n = seconds/10;
+ 101   4          }else if(i == 2){
+ 102   4            n = mins%10;
+ 103   4            dp = 1;
+ 104   4          }else if(i == 3){
+ 105   4            n = mins/10;
+ 106   4          }else if(i == 4){
+ 107   4            n = hours%10;
+ 108   4            dp = 1;
+ 109   4          }else if(i == 5){
+ 110   4            n = hours/10;
+ 111   4          }else{
+ 112   4            n = 0xff;
+ 113   4          }
+ 114   3          P0=0xff;    
+ 115   3          if( dp == 1){
+ 116   4            res = table1[n] ^ 0x80;
+ 117   4          }else{
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 3   
+
+ 118   4            res = table1[n];
+ 119   4          }
+ 120   3          if(i /2 == flash){
+ 121   4            cnt = cnt + 1;
+ 122   4            if(cnt == 200){
+ 123   5              cnt = 0;
+ 124   5            }
+ 125   4            if(cnt>=0 && cnt <100){
+ 126   5              res = res | 0xff;
+ 127   5            }else{
+ 128   5              res = res | 0x00;
+ 129   5            }
+ 130   4          }
+ 131   3          P0 = res;
+ 132   3          P2=wei;
+ 133   3          wei=_cror_(wei,1);
+ 134   3          delay(2);
+ 135   3          }
+ 136   2          if(button1 == 0){
+ 137   3            delay(20);
+ 138   3            if(button1 == 0){
+ 139   4              break;
+ 140   4            }
+ 141   3          }
+ 142   2          if(button2 == 0){
+ 143   3            delay(20);
+ 144   3            if(button2 == 0){
+ 145   4              flash = flash+1;
+ 146   4              if(flash == 3){
+ 147   5                flash = 0;
+ 148   5              }
+ 149   4              while(button2 == 0){
+ 150   5                //fangzhi chongfu guanjian caozuo  
+ 151   5              }
+ 152   4            }
+ 153   3          }
+ 154   2          if(button3 ==0){
+ 155   3            delay(20);
+ 156   3            if(button3 == 0){
+ 157   4              if(flash ==0){
+ 158   5                seconds = seconds + 1;
+ 159   5                if(seconds == 60){
+ 160   6                  seconds = 0;
+ 161   6                  mins = mins + 1;
+ 162   6                  if(mins == 60){
+ 163   7                    mins = 0;
+ 164   7                    hours = hours + 1;
+ 165   7                    if(hours == 24){
+ 166   8                      hours = 0;
+ 167   8                    }
+ 168   7                  }
+ 169   6                }
+ 170   5              }else if(flash == 1){
+ 171   5                mins = mins + 1;
+ 172   5                if(mins == 60){
+ 173   6                  mins = 0;
+ 174   6                  hours = hours +1;
+ 175   6                  if(hours == 24){
+ 176   7                    hours = 0;
+ 177   7                  }
+ 178   6                }
+ 179   5              }else{
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 4   
+
+ 180   5                hours = hours + 1;
+ 181   5                if(hours == 24){
+ 182   6                  hours = 0;
+ 183   6                }
+ 184   5              }
+ 185   4              while(button3 == 0);
+ 186   4            }
+ 187   3          }
+ 188   2        }   
+ 189   1      }
+ 190          void ex1_intr() interrupt 2 { //int1,set alock
+ 191   1        uchar i,wei=0x20;
+ 192   1        uchar n = 0x00;
+ 193   1        uchar dp = 0;
+ 194   1        uchar flash = 0;
+ 195   1        uchar cnt = 0;
+ 196   1        uchar res;
+ 197   1        while(1)
+ 198   1        {
+ 199   2          wei=0x20;
+ 200   2          for(i=0;i<6;i++)
+ 201   2          {   
+ 202   3          //P0=table1[i];
+ 203   3          dp = 0;
+ 204   3          if(i == 0){
+ 205   4            n = alock_seconds%10;
+ 206   4            dp = 1;
+ 207   4          }else if(i == 1){
+ 208   4            n = alock_seconds/10;
+ 209   4          }else if(i == 2){
+ 210   4            n = alock_mins%10;
+ 211   4            dp = 1;
+ 212   4          }else if(i == 3){
+ 213   4            n = alock_mins/10;
+ 214   4          }else if(i == 4){
+ 215   4            n = alock_hours%10;
+ 216   4            dp = 1;
+ 217   4          }else if(i == 5){
+ 218   4            n = alock_hours/10;
+ 219   4          }else{
+ 220   4            n = 0xff;
+ 221   4          }
+ 222   3          P0=0xff;    
+ 223   3          if( dp == 1){
+ 224   4            res = table1[n] ^ 0x80;
+ 225   4          }else{
+ 226   4            res = table1[n];
+ 227   4          }
+ 228   3          if(i /2 == flash){
+ 229   4            cnt = cnt + 1;
+ 230   4            if(cnt == 200){
+ 231   5              cnt = 0;
+ 232   5            }
+ 233   4            if(cnt>=0 && cnt <100){
+ 234   5              res = res | 0xff;
+ 235   5            }else{
+ 236   5              res = res | 0x00;
+ 237   5            }
+ 238   4          }
+ 239   3          P0 = res;
+ 240   3          P2=wei;
+ 241   3          wei=_cror_(wei,1);
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 5   
+
+ 242   3          delay(2);
+ 243   3          }
+ 244   2          if(button1 == 0){
+ 245   3            delay(20);
+ 246   3            if(button1 == 0){
+ 247   4              break;
+ 248   4            }
+ 249   3          }
+ 250   2          if(button2 == 0){
+ 251   3            delay(20);
+ 252   3            if(button2 == 0){
+ 253   4              flash = flash+1;
+ 254   4              if(flash == 3){
+ 255   5                flash = 0;
+ 256   5              }
+ 257   4              while(button2 == 0){
+ 258   5                //fangzhi chongfu guanjian caozuo  
+ 259   5              }
+ 260   4            }
+ 261   3          }
+ 262   2          if(button3 ==0){
+ 263   3            delay(20);
+ 264   3            if(button3 == 0){
+ 265   4              if(flash ==0){
+ 266   5                alock_seconds = alock_seconds + 1;
+ 267   5                if(alock_seconds == 60){
+ 268   6                  alock_seconds = 0;
+ 269   6                  alock_mins = alock_mins + 1;
+ 270   6                  if(alock_mins == 60){
+ 271   7                    alock_mins = 0;
+ 272   7                    alock_hours = alock_hours + 1;
+ 273   7                    if(alock_hours == 24){
+ 274   8                      alock_hours = 0;
+ 275   8                    }
+ 276   7                  }
+ 277   6                }
+ 278   5              }else if(flash == 1){
+ 279   5                alock_mins = alock_mins + 1;
+ 280   5                if(alock_mins == 60){
+ 281   6                  alock_mins = 0;
+ 282   6                  alock_hours = alock_hours +1;
+ 283   6                  if(alock_hours == 24){
+ 284   7                    alock_hours = 0;
+ 285   7                  }
+ 286   6                }
+ 287   5              }else{
+ 288   5                alock_hours = alock_hours + 1;
+ 289   5                if(alock_hours == 24){
+ 290   6                  alock_hours = 0;
+ 291   6                }
+ 292   5              }
+ 293   4              while(button3 == 0);
+ 294   4            }
+ 295   3          }
+ 296   2        }     
+ 297   1      }
+ 298          
+ 299          void display_time()
+ 300          {
+ 301   1        uchar i,wei=0x20;
+ 302   1        uchar n = 0x00;
+ 303   1        uchar dp = 0;
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 6   
+
+ 304   1        uchar state = 0;
+ 305   1        uchar cnt = 0;
+ 306   1        //if state == 0,normally. if state == 1,led is flash.
+ 307   1        while(1)
+ 308   1        {
+ 309   2          wei=0x20;
+ 310   2          for(i=0;i<6;i++)
+ 311   2          {   
+ 312   3          //P0=table1[i];
+ 313   3          dp = 0;
+ 314   3          if(i == 0){
+ 315   4            n = seconds%10;
+ 316   4            dp = 1;
+ 317   4          }else if(i == 1){
+ 318   4            n = seconds/10;
+ 319   4          }else if(i == 2){
+ 320   4            n = mins%10;
+ 321   4            dp = 1;
+ 322   4          }else if(i == 3){
+ 323   4            n = mins/10;
+ 324   4          }else if(i == 4){
+ 325   4            n = hours%10;
+ 326   4            dp = 1;
+ 327   4          }else if(i == 5){
+ 328   4            n = hours/10;
+ 329   4          }else{
+ 330   4            n = 0xff;
+ 331   4          }
+ 332   3          P0=0xff;    
+ 333   3          if( dp == 1){
+ 334   4            P0 = table1[n] ^ 0x80;
+ 335   4          }else{
+ 336   4            P0 = table1[n];
+ 337   4          }
+ 338   3          P2=wei;
+ 339   3          wei=_cror_(wei,1);
+ 340   3          delay(2);
+ 341   3          }
+ 342   2          if(state == 0){
+ 343   3            led = 1;
+ 344   3          }else{//yao shanliang
+ 345   3            cnt = cnt + 1;
+ 346   3            if(cnt == 20){
+ 347   4              cnt = 0;
+ 348   4            }
+ 349   3            if(cnt>=0 && cnt <5){
+ 350   4              led = 0;
+ 351   4            }else{
+ 352   4              led = 1;
+ 353   4            }
+ 354   3          }
+ 355   2          if(state == 0){
+ 356   3            if(hours == alock_hours && mins == alock_mins && seconds == alock_seconds){
+ 357   4              state = 1;
+ 358   4            }
+ 359   3          }else{
+ 360   3            if(button1 == 1 && button2 == 1 && button3 ==1){
+ 361   4            
+ 362   4            }else{//push any button state = 0;
+ 363   4              state = 0;
+ 364   4              delay(20);
+ 365   4              if(button1 != 1){//zaishui wufenzhong
+C51 COMPILER V9.60.0.0   MAIN                                                              05/02/2020 17:55:44 PAGE 7   
+
+ 366   5                alock_mins = alock_mins + 5;
+ 367   5              }
+ 368   4            }
+ 369   3          }
+ 370   2        }
+ 371   1      }
+ 372          void main(){
+ 373   1        init_time();
+ 374   1        initT0();
+ 375   1        initEx0();
+ 376   1        delay(20);
+ 377   1        display_time();
+ 378   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1252    ----
+   CONSTANT SIZE    =     16    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7      17
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
